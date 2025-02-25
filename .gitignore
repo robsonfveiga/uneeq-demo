@@ -12,7 +12,7 @@ dist
 dist-ssr
 *.local
 /server/uploads/*
-.cursor
+.cursor/*
 
 # Editor directories and files
 .vscode/*
