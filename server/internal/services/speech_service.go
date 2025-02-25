@@ -1,4 +1,4 @@
-package main
+package services
 
 import (
 	"context"
@@ -12,14 +12,9 @@ import (
 	speechpb "cloud.google.com/go/speech/apiv1/speechpb"
 	"github.com/gorilla/websocket"
 	"google.golang.org/protobuf/types/known/wrapperspb"
-)
 
-// TranscriptionMessage represents a transcription response
-type TranscriptionMessage struct {
-	BaseMessage
-	Text    string `json:"text"`
-	IsFinal bool   `json:"isFinal"`
-}
+	"today.whyme/internal/models"
+)
 
 // SpeechService handles the Google Speech-to-Text streaming
 type SpeechService struct {
@@ -93,7 +88,30 @@ func (s *SpeechService) ProcessAudioStream(ctx context.Context) (chan<- []byte, 
 	}
 
 	// Send the streaming config
-	if err := stream.Send(&speechpb.StreamingRecognizeRequest{
+	if err := s.sendStreamConfig(stream); err != nil {
+		s.mu.Lock()
+		close(s.audioChan)
+		s.audioChan = nil
+		s.mu.Unlock()
+		return nil, err
+	}
+
+	s.streaming = true
+
+	// Start the stream timeout timer
+	go s.handleStreamTimeout(ctx, stream)
+
+	// Start processing responses in a goroutine
+	go s.handleResponses(ctx, stream)
+
+	// Start processing audio data in a goroutine
+	go s.handleAudioData(ctx, stream, s.audioChan)
+
+	return s.audioChan, nil
+}
+
+func (s *SpeechService) sendStreamConfig(stream speechpb.Speech_StreamingRecognizeClient) error {
+	return stream.Send(&speechpb.StreamingRecognizeRequest{
 		StreamingRequest: &speechpb.StreamingRecognizeRequest_StreamingConfig{
 			StreamingConfig: &speechpb.StreamingRecognitionConfig{
 				Config: &speechpb.RecognitionConfig{
@@ -109,26 +127,7 @@ func (s *SpeechService) ProcessAudioStream(ctx context.Context) (chan<- []byte, 
 				InterimResults: true,
 			},
 		},
-	}); err != nil {
-		s.mu.Lock()
-		close(s.audioChan)
-		s.audioChan = nil
-		s.mu.Unlock()
-		return nil, fmt.Errorf("failed to send streaming config: %v", err)
-	}
-
-	s.streaming = true
-
-	// Start the stream timeout timer
-	go s.handleStreamTimeout(ctx, stream)
-
-	// Start processing responses in a goroutine
-	go s.handleResponses(ctx, stream)
-
-	// Start processing audio data in a goroutine
-	go s.handleAudioData(ctx, stream, s.audioChan)
-
-	return s.audioChan, nil
+	})
 }
 
 func (s *SpeechService) handleStreamTimeout(ctx context.Context, stream speechpb.Speech_StreamingRecognizeClient) {
@@ -168,23 +167,7 @@ func (s *SpeechService) restartStream(ctx context.Context) {
 	}
 
 	// Resend config
-	if err := stream.Send(&speechpb.StreamingRecognizeRequest{
-		StreamingRequest: &speechpb.StreamingRecognizeRequest_StreamingConfig{
-			StreamingConfig: &speechpb.StreamingRecognitionConfig{
-				Config: &speechpb.RecognitionConfig{
-					Encoding:                   speechpb.RecognitionConfig_WEBM_OPUS,
-					SampleRateHertz:            48000,
-					LanguageCode:               "en-US",
-					EnableAutomaticPunctuation: true,
-					EnableSpokenPunctuation:    wrapperspb.Bool(true),
-					EnableSpokenEmojis:         wrapperspb.Bool(true),
-					UseEnhanced:                true,
-					Model:                      "latest_long",
-				},
-				InterimResults: true,
-			},
-		},
-	}); err != nil {
+	if err := s.sendStreamConfig(stream); err != nil {
 		log.Printf("Failed to send config to new stream: %v", err)
 		return
 	}
@@ -243,10 +226,10 @@ func (s *SpeechService) handleResponses(ctx context.Context, stream speechpb.Spe
 					isFinal := result.IsFinal
 
 					// Create and send transcription message
-					msg := TranscriptionMessage{
-						BaseMessage: BaseMessage{
-							Type:      MessageTypeTranscription,
-							Timestamp: getNowTimestamp(),
+					msg := models.TranscriptionMessage{
+						BaseMessage: models.BaseMessage{
+							Type:      models.MessageTypeTranscription,
+							Timestamp: time.Now().UnixMilli(),
 						},
 						Text:    transcript,
 						IsFinal: isFinal,
@@ -256,11 +239,6 @@ func (s *SpeechService) handleResponses(ctx context.Context, stream speechpb.Spe
 						log.Printf("Failed to send transcription: %v", err)
 						return
 					}
-
-					log.Printf("[Session: %s] Transcription (%v): %s",
-						s.sessionID,
-						isFinal,
-						transcript)
 				}
 			}
 		}
@@ -269,13 +247,9 @@ func (s *SpeechService) handleResponses(ctx context.Context, stream speechpb.Spe
 
 // handleAudioData processes incoming audio data and sends it to Google Speech-to-Text
 func (s *SpeechService) handleAudioData(ctx context.Context, stream speechpb.Speech_StreamingRecognizeClient, audioChan <-chan []byte) {
-	defer stream.CloseSend()
-
 	for {
 		select {
 		case <-ctx.Done():
-			return
-		case <-s.stopChan:
 			return
 		case audioData, ok := <-audioChan:
 			if !ok {
@@ -286,28 +260,14 @@ func (s *SpeechService) handleAudioData(ctx context.Context, stream speechpb.Spe
 			s.audioInput = append(s.audioInput, audioData)
 			s.mu.Unlock()
 
-			select {
-			case <-ctx.Done():
+			if err := stream.Send(&speechpb.StreamingRecognizeRequest{
+				StreamingRequest: &speechpb.StreamingRecognizeRequest_AudioContent{
+					AudioContent: audioData,
+				},
+			}); err != nil {
+				log.Printf("Failed to send audio data: %v", err)
 				return
-			default:
-				if err := stream.Send(&speechpb.StreamingRecognizeRequest{
-					StreamingRequest: &speechpb.StreamingRecognizeRequest_AudioContent{
-						AudioContent: audioData,
-					},
-				}); err != nil {
-					if ctx.Err() != nil {
-						return
-					}
-					log.Printf("Failed to send audio data: %v", err)
-					s.restartStream(ctx)
-					return
-				}
 			}
 		}
 	}
-}
-
-// getNowTimestamp returns the current timestamp in milliseconds
-func getNowTimestamp() int64 {
-	return time.Now().UnixMilli()
 }

@@ -1,0 +1,97 @@
+---
+description: You are an frontend designer specialized to create layouts UI/UX Style
+globs: 
+---
+# Color Schema & UI/UX Rules Inspired
+
+You are an frontend designer that help generate **futuristic, cyberpunk-inspired, and visually immersive** while maintaining clarity and readability.
+
+---
+
+## Color Schema  
+
+### Backgrounds & Containers  
+- **Primary Background:** `#0A0A0A` (Deep Charcoal) or `#121212` (Near-Black)  
+- **Secondary Background:** `#181818` (Darker Gray for depth and layering)  
+- **Card Backgrounds:** `#1E1E1E` (Smooth, dark gray with soft shadows)  
+- **Gradient Accents:** Purples, Blues, and Neon Glows in **linear or radial gradients**  
+
+### Text Colors  
+- **Primary Text:** `#EAEAEA` (Bright Off-White for readability)  
+- **Secondary Text:** `#A0A0A0` (Muted descriptions)  
+- **Disabled Text:** `#5A5A5A` (Low contrast for de-emphasis)  
+- **Hyperlinks & Highlights:** `#6C63FF` (Soft Glow Blue) or `#A29BFE` (Subtle Purple)  
+
+### Accent Colors  
+- **CTA and Interactive Elements:**  
+  - **Electric Blue:** `#0D6EFD` (Neon-like intensity)  
+  - **Futuristic Purple:** `#8E44AD` (Vivid glow effects)  
+  - **Neon Pink:** `#E91E63` (High-impact visuals)  
+  - **Neon Green:** `#27AE60` (Cyberpunk edge)  
+- **Alert & Notifications:** `#E74C3C` (Vibrant Red)  
+
+---
+
+## UI/UX Rules  
+
+### Typography & Readability  
+- **Fonts:** `Inter`, `Poppins`, `SF Pro`, or `Space Grotesk` (Clean & modern sans-serif)  
+- **Font Sizing:**  
+  - Headings: **Bold, large (36px+)**  
+  - Subheadings: **28px**  
+  - Body Text: **18px**  
+- **Text Effects:**  
+  - Gradient glow on key phrases  
+  - Subtle **drop shadow** for legibility on dark backgrounds  
+
+---
+
+## Components  
+
+### Navigation & Sections  
+- **Minimalist, high-contrast headers**  
+- **Centralized Components**
+- **Sections separated by subtle gradients or lighting effects**  
+- **Smooth fade-ins and scroll animations for immersive storytelling**  
+
+---
+
+### Buttons & Interactive Elements  
+- **Primary Buttons**  
+  - Background: `#232323`  
+  - Border: `2px solid accent-color`  
+  - Text: `#EAEAEA` (White or Light Gray)  
+  - Hover: **Soft Glow** (`box-shadow: 0px 0px 12px accent-color`)  
+  - **Click Effect:** Slight **scale-down (`transform: scale(0.98)`)**  
+
+- **Secondary Buttons**  
+  - Transparent / Outlined with neon accents  
+  - Hover: **Glassmorphism blur with soft glow**  
+
+---
+
+### Cards & Containers  
+- **Dark glass-like surfaces with soft reflections**  
+- **Glow effects on hover**  
+- **Subtle 3D layering for depth**  
+- **Rounded Corners:** `16px`  
+
+---
+
+## Animations & Effects  
+
+### Entrance & Transitions  
+- **Fade-In Animations:** `opacity: 0 → 1` with **ease-in-out transition (0.8s)**  
+- **Subtle Scaling:** Sections should slightly expand on reveal  
+
+### Shadows & Glows  
+- **Soft neon glows on interactive elements**  
+- **Glassmorphism overlays with blur**  
+- **Gradient shadows under text to improve contrast**  
+
+### Motion Enhancements  
+- **Framer Motion or GSAP for smooth UI interactions**  
+- **Parallax scrolling for a futuristic storytelling effect**  
+- **Subtle hover tilts for 3D depth**  
+
+---
